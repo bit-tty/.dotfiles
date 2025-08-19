@@ -4,9 +4,16 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-enabled-themes '(base16-black-metal-venom))
+ '(custom-enabled-themes '(base16-default-dark))
  '(custom-safe-themes
-   '("f700bc979515153bef7a52ca46a62c0aa519950cc06d539df4f3d38828944a2c"
+   '("9cda0155ffd0cddac60729f5e821ba7955e1623ec7bcb12ca8e7219c33747e0f"
+     "aad354ecde2ba0f811443573c9e6b8a45cd4a1d413cfbe7e3766b7598359a68e"
+     "c8863bf29722cf36c5d293ac723fe9698e16f778326d791516dd717951ea8cd6"
+     "7bf34d114ec815e05a1ecb7f1acfd61ef453bfd27d12cc4c2babfa08ca1314da"
+     "bd17d0f6495c2626c493322ff37c64dc76ddb06c10dbadfead6a4f92775f00f3"
+     "039112154ee5166278a7b65790c665fe17fd21c84356b7ad4b90c29ffe0ad606"
+     "bff7b12e47678c11d4ca664ef81e49c6bfaea997493de89bcd5b39ae24311242"
+     "f700bc979515153bef7a52ca46a62c0aa519950cc06d539df4f3d38828944a2c"
      "882d6a5981fd85d9f987d31623e25e69b8d5635a53ab442f1a51e7c252790320"
      "882001d4237dfe3e84ceeeee697a0da77719c9ab4e85eca7bb43541815d458fc"
      "72f39878267871f98a77c1dd0b859bedfa10493c4d757549c64ae422f659b2e5"
@@ -30,10 +37,11 @@
      "1fc299974daa270e19d1b206ec40aab3a0ce35e7c6a7d389b156bcd411e41a3c"
      "720e8768e7a9bbda94758aba8ef29314fdc51a3e22ac8146726c752fa0a97221"
      "5d67552ed2e841039034dc8245ee1746ab4f00614366ca7018386041f9b0a96f"
-     "e13beeb34b932f309fb2c360a04a460821ca99fe58f69e65557d6c1b10ba18c7" default))
+     "e13beeb34b932f309fb2c360a04a460821ca99fe58f69e65557d6c1b10ba18c7"
+     default))
  '(package-selected-packages
-   '(base16-theme company company-template flycheck-inline gruber-darker-theme
-                  lsp-ui yasnippet-snippets)))
+   '(base16-theme clang-format company company-template flycheck-inline
+		  gruber-darker-theme lsp-ui yasnippet-snippets)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

@@ -20,8 +20,7 @@
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
                          ("elpa" . "https://elpa.gnu.org/packages/"))
-      package-archive-priorities '(("melpa" . 1)
-                                   ("elpa" . 2)))
+      package-archive-priorities '(("melpa" . 1) ("elpa" . 2)))
 (package-initialize)
 
 ;; Install use-package if not already installed
@@ -31,13 +30,13 @@
 
 (require 'use-package)
 (setq use-package-always-ensure t
-      use-package-always-defer t  ;; Defer loading for better startup time
+      use-package-always-defer t ;; Defer loading for better startup time
       use-package-expand-minimally t)
 
 ;; YASnippet for parameter completion and code snippets
 (use-package yasnippet
   :ensure t
-  :defer 2  ; Load after 2 seconds
+  :defer 2 ; Load after 2 seconds
   :config
   (yas-global-mode 1)
   (setq yas-snippet-dirs '("~/.emacs.d/snippets"))
@@ -59,17 +58,21 @@
   (which-key-mode)
   (setq which-key-idle-delay 0.3))
 
- :config
+;; Company mode for completion
+(use-package company
+  :defer 1
+  :config
+  (global-company-mode)
   (setq company-show-numbers t
         company-tooltip-align-annotations t
         company-idle-delay 0.1
-        company-minimum-prefix-length 1)
+        company-minimum-prefix-length 1))
 
 (use-package company-template
   :after company
   :config
-  (define-key company-template-nav-map (kbd "TAB") 'company-template-forward-field))
-
+  (define-key company-template-nav-map (kbd "TAB")
+    'company-template-forward-field))
 
 ;; Enhanced Flycheck for syntax checking with inline errors
 (use-package flycheck
@@ -98,23 +101,24 @@
   :config
   ;; Performance optimizations
   (setq lsp-idle-delay 0.5
-        lsp-log-io nil  ; Disable IO logging for performance
-        lsp-enable-file-watchers nil  ; Disable file watchers for large projects
+        lsp-log-io nil ; Disable IO logging for performance
+        lsp-enable-file-watchers nil ; Disable file watchers for large projects
         lsp-enable-folding nil
         lsp-enable-imenu nil
-        lsp-enable-snippet t  ; Enable snippets for parameter completion
+        lsp-enable-snippet t ; Enable snippets for parameter completion
         lsp-enable-symbol-highlighting t
-        lsp-signature-auto-activate nil  ; Disable auto signature help for performance
+        lsp-signature-auto-activate nil ; Disable auto signature help for performance
         lsp-signature-render-documentation nil)
   
   ;; Configure clangd for C development
-  (setq lsp-clients-clangd-args '("-j=3"
-                                  "--background-index"
-                                  "--clang-tidy"
-                                  "--completion-style=detailed"
-                                  "--header-insertion=never"
-                                  "--header-insertion-decorators=0"
-                                  "--pch-storage=memory"))
+  (setq lsp-clients-clangd-args
+        '("-j=3"
+          "--background-index"
+          "--clang-tidy"
+          "--completion-style=detailed"
+          "--header-insertion=never"
+          "--header-insertion-decorators=0"
+          "--pch-storage=memory"))
   
   ;; Force C mode for .c files
   (add-to-list 'lsp-language-id-configuration '(c-mode . "c")))
@@ -143,18 +147,64 @@
   (setq lsp-ui-peek-enable t
         lsp-ui-peek-show-directory t))
 
-;; C mode configuration
+;; C mode configuration - Linux coding style
 (setq c-default-style "linux"
-      c-basic-offset 4)
+      c-basic-offset 8)  ; Linux kernel uses 8-space indentation
+
+;; Enhanced Linux style with proper tab handling
+(defun c-lineup-arglist-tabs-only (ignored)
+  "Line up argument lists by tabs, not spaces"
+  (let* ((anchor (c-langelem-pos c-syntactic-element))
+         (column (c-langelem-2nd-pos c-syntactic-element))
+         (offset (- (1+ column) anchor))
+         (steps (floor offset c-basic-offset)))
+    (* (max steps 1) c-basic-offset)))
+
+;; Define the Linux tabs-only style
+(c-add-style "linux-tabs-only"
+             '("linux"
+               (c-offsets-alist
+                (arglist-cont-nonempty
+                 c-lineup-gcc-asm-reg
+                 c-lineup-arglist-tabs-only))))
+
+;; Apply Linux coding style to all C files
+(add-hook 'c-mode-hook
+          (lambda ()
+            ;; Use tabs, not spaces
+            (setq indent-tabs-mode t)
+            ;; Show trailing whitespace (good practice)
+            (setq show-trailing-whitespace t)
+            ;; Set the Linux tabs-only style
+            (c-set-style "linux-tabs-only")
+            ;; Ensure tab width is 8 (Linux standard)
+            (setq tab-width 8)
+            ;; Set basic offset to 8
+            (setq c-basic-offset 8)))
 
 ;; File associations
 (add-to-list 'auto-mode-alist '("\\.c\\'" . c-mode))
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c-mode))
 
+;; Optional: Add some Linux kernel specific settings
+(defun setup-kernel-coding-style ()
+  "Additional settings for strict Linux kernel style compliance"
+  (interactive)
+  ;; Maximum line length for kernel code
+  (setq fill-column 80)
+  ;; Highlight lines that are too long
+  (require 'whitespace)
+  (setq whitespace-style '(face lines-tail))
+  (setq whitespace-line-column 80)
+  (whitespace-mode 1))
+
+;; Uncomment the next line if you want kernel-specific settings for all C files
+;; (add-hook 'c-mode-hook 'setup-kernel-coding-style)
+
 ;; CUA mode for familiar cut/copy/paste keybindings
-;;(cua-mode 1)
-;;(setq cua-auto-tabify-rectangles nil
-;;      cua-keep-region-after-copy t)
+(cua-mode 1)
+(setq cua-auto-tabify-rectangles nil
+      cua-keep-region-after-copy t)
 
 ;; Global keybindings
 (global-set-key (kbd "M-n") 'flycheck-next-error)
@@ -168,21 +218,21 @@
  '(flycheck-info ((t (:underline (:color "blue" :style wave))))))
 
 ;; Better defaults
-(setq-default indent-tabs-mode nil    ; Use spaces instead of tabs
-              tab-width 4             ; Set tab width
-              fill-column 80)         ; Set line length
+(setq-default indent-tabs-mode nil ; Use spaces instead of tabs (overridden in C mode)
+              tab-width 4         ; Set tab width (overridden in C mode to 8)
+              fill-column 80)     ; Set line length
 
 ;; Global modes
-(global-auto-revert-mode 1)           ; Auto-reload files changed outside Emacs
-(show-paren-mode 1)                   ; Highlight matching parentheses
-(delete-selection-mode 1)             ; Replace selected text when typing
-(save-place-mode 1)                   ; Remember cursor position in files
+(global-auto-revert-mode 1)   ; Auto-reload files changed outside Emacs
+(show-paren-mode 1)           ; Highlight matching parentheses
+(delete-selection-mode 1)     ; Replace selected text when typing
+(save-place-mode 1)           ; Remember cursor position in files
 
 ;; Performance optimizations
 (setq gc-cons-threshold (* 2 1000 1000)  ; Increase garbage collection threshold
-      read-process-output-max (* 1024 1024)  ; Increase process output buffer
-      inhibit-startup-screen t               ; Skip startup screen
-      initial-scratch-message nil)           ; Clear scratch buffer message
+      read-process-output-max (* 1024 1024) ; Increase process output buffer
+      inhibit-startup-screen t             ; Skip startup screen
+      initial-scratch-message nil)         ; Clear scratch buffer message
 
 ;; Backup and auto-save configuration
 (setq backup-directory-alist '(("." . "~/.emacs.d/backups"))
@@ -191,7 +241,7 @@
       kept-new-versions 6
       kept-old-versions 2
       version-control t
-      create-lockfiles nil)  ; Disable lockfiles
+      create-lockfiles nil) ; Disable lockfiles
 
 ;; Create backup and auto-save directories if they don't exist
 (let ((backup-dir "~/.emacs.d/backups")
