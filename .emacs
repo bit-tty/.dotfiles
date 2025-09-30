@@ -58,6 +58,11 @@
   (which-key-mode)
   (setq which-key-idle-delay 0.3))
 
+
+(require 'package)
+(add-to-list 'package-archives
+             '("melpa" . "http://melpa.org/packages/") t)
+
 ;; Company mode for completion
 (use-package company
   :defer 1
@@ -147,6 +152,182 @@
   (setq lsp-ui-peek-enable t
         lsp-ui-peek-show-directory t))
 
+;; NASM mode for assembly language programming
+(use-package nasm-mode
+  :ensure t
+  :mode (("\\.nasm\\'" . nasm-mode)
+         ("\\.asm\\'" . nasm-mode)
+         ("\\.s\\'" . nasm-mode)
+         ("\\.S\\'" . nasm-mode)
+         ("\\.inc\\'" . nasm-mode))
+  :config
+  ;; NASM-specific settings
+  (setq nasm-basic-offset 4)
+  
+  ;; Custom indentation function for NASM
+  (defun nasm-indent-line ()
+    "Indent current line as NASM assembly code."
+    (interactive)
+    (let ((indent-col 0)
+          (current-line (thing-at-point 'line t)))
+      (save-excursion
+        (beginning-of-line)
+        (cond
+         ;; Labels (ending with :) should have no indentation
+         ((string-match "^[a-zA-Z_][a-zA-Z0-9_]*:" current-line)
+          (setq indent-col 0))
+         ;; Instructions and directives should be indented
+         ((string-match "^[ \t]*[a-zA-Z]" current-line)
+          (setq indent-col nasm-basic-offset))
+         ;; Comments starting the line
+         ((string-match "^[ \t]*;" current-line)
+          (setq indent-col 0))
+         ;; Default indentation
+         (t (setq indent-col nasm-basic-offset))))
+      (indent-line-to indent-col)))
+  
+  ;; Set up NASM mode hook
+  (add-hook 'nasm-mode-hook
+            (lambda ()
+              ;; Set indentation function
+              (setq-local indent-line-function 'nasm-indent-line)
+              ;; Use tabs for indentation in assembly
+              (setq indent-tabs-mode t)
+              (setq tab-width 8)
+              ;; Set comment syntax
+              (setq-local comment-start ";")
+              (setq-local comment-end "")
+              ;; Enable syntax highlighting
+              (font-lock-mode 1))))
+
+;; Assembly language snippets setup
+(defun create-nasm-snippets-directory ()
+  "Create NASM snippets directory and add some basic snippets."
+  (let ((nasm-snippet-dir "~/.emacs.d/snippets/nasm-mode"))
+    (unless (file-exists-p nasm-snippet-dir)
+      (make-directory nasm-snippet-dir t))
+    
+    ;; Create basic NASM snippets
+    (let ((snippets '(
+                     ("main" . "# -*- mode: snippet -*-
+# name: main function template
+# key: main
+# --
+section .text
+global _start
+
+_start:
+    $0
+    
+    ; Exit program
+    mov rax, 60        ; sys_exit
+    mov rdi, 0         ; exit status
+    syscall")
+
+                     ("func" . "# -*- mode: snippet -*-
+# name: function template
+# key: func
+# --
+${1:function_name}:
+    push rbp
+    mov rbp, rsp
+    
+    $0
+    
+    mov rsp, rbp
+    pop rbp
+    ret")
+
+                     ("loop" . "# -*- mode: snippet -*-
+# name: loop template
+# key: loop
+# --
+${1:loop_start}:
+    $0
+    
+    ${2:dec rcx}
+    jnz $1")
+
+                     ("data" . "# -*- mode: snippet -*-
+# name: data section
+# key: data
+# --
+section .data
+    ${1:variable} d${2:b} ${3:value}$0")
+
+                     ("bss" . "# -*- mode: snippet -*-
+# name: bss section
+# key: bss
+# --
+section .bss
+    ${1:buffer} res${2:b} ${3:size}$0")
+
+                     ("print" . "# -*- mode: snippet -*-
+# name: print string (Linux syscall)
+# key: print
+# --
+    mov rax, 1         ; sys_write
+    mov rdi, 1         ; stdout
+    mov rsi, ${1:message}
+    mov rdx, ${2:length}
+    syscall$0"))))
+      
+      (dolist (snippet snippets)
+        (let ((filename (concat nasm-snippet-dir "/" (car snippet))))
+          (unless (file-exists-p filename)
+            (with-temp-file filename
+              (insert (cdr snippet)))))))))
+
+;; Create NASM snippets after yasnippet is loaded
+(with-eval-after-load 'yasnippet
+  (create-nasm-snippets-directory))
+
+;; Company backend for NASM keywords and registers
+(defvar nasm-keywords
+  '("section" "global" "extern" "bits" "org" "times" "db" "dw" "dd" "dq" "dt"
+    "resb" "resw" "resd" "resq" "rest" "incbin" "equ" "struc" "endstruc"
+    "istruc" "iend" "align" "alignb" "use16" "use32" "use64"))
+
+(defvar nasm-registers
+  '("rax" "rbx" "rcx" "rdx" "rsi" "rdi" "rbp" "rsp"
+    "r8" "r9" "r10" "r11" "r12" "r13" "r14" "r15"
+    "eax" "ebx" "ecx" "edx" "esi" "edi" "ebp" "esp"
+    "ax" "bx" "cx" "dx" "si" "di" "bp" "sp"
+    "al" "bl" "cl" "dl" "ah" "bh" "ch" "dh"
+    "xmm0" "xmm1" "xmm2" "xmm3" "xmm4" "xmm5" "xmm6" "xmm7"
+    "xmm8" "xmm9" "xmm10" "xmm11" "xmm12" "xmm13" "xmm14" "xmm15"))
+
+(defvar nasm-instructions
+  '("mov" "add" "sub" "mul" "div" "imul" "idiv" "inc" "dec"
+    "cmp" "test" "and" "or" "xor" "not" "neg" "shl" "shr" "sal" "sar"
+    "jmp" "je" "jne" "jz" "jnz" "jl" "jle" "jg" "jge" "ja" "jae" "jb" "jbe"
+    "call" "ret" "push" "pop" "nop" "int" "syscall" "leave" "enter"
+    "loop" "loope" "loopne" "loopz" "loopnz" "rep" "repe" "repne" "repz" "repnz"))
+
+(defun company-nasm (command &optional arg &rest ignored)
+  "Company backend for NASM assembly."
+  (interactive (list 'interactive))
+  (case command
+    (interactive (company-begin-backend 'company-nasm))
+    (prefix (and (eq major-mode 'nasm-mode)
+                 (company-grab-symbol)))
+    (candidates
+     (let ((prefix (downcase arg)))
+       (append
+        (all-completions prefix nasm-keywords)
+        (all-completions prefix nasm-registers)
+        (all-completions prefix nasm-instructions))))
+    (meta
+     (cond
+      ((member arg nasm-keywords) "NASM directive/keyword")
+      ((member arg nasm-registers) "CPU register")
+      ((member arg nasm-instructions) "Assembly instruction")
+      (t nil)))))
+
+;; Add NASM company backend
+(with-eval-after-load 'company
+  (add-to-list 'company-backends 'company-nasm))
+
 ;; C mode configuration - Linux coding style
 (setq c-default-style "linux"
       c-basic-offset 8)  ; Linux kernel uses 8-space indentation
@@ -173,8 +354,6 @@
           (lambda ()
             ;; Use tabs, not spaces
             (setq indent-tabs-mode t)
-            ;; Show trailing whitespace (good practice)
-            (setq show-trailing-whitespace t)
             ;; Set the Linux tabs-only style
             (c-set-style "linux-tabs-only")
             ;; Ensure tab width is 8 (Linux standard)
@@ -210,6 +389,21 @@
 (global-set-key (kbd "M-n") 'flycheck-next-error)
 (global-set-key (kbd "M-p") 'flycheck-previous-error)
 (global-set-key (kbd "C-c e") 'flycheck-list-errors)
+
+;; NASM-specific keybindings
+(with-eval-after-load 'nasm-mode
+  (define-key nasm-mode-map (kbd "C-c C-c") 'compile)
+  (define-key nasm-mode-map (kbd "C-c C-r") 'nasm-run-buffer))
+
+;; Custom compile function for NASM
+(defun nasm-compile-and-run ()
+  "Compile current NASM file and create executable."
+  (interactive)
+  (let* ((filename (file-name-sans-extension (buffer-file-name)))
+         (object-file (concat filename ".o"))
+         (executable-file filename))
+    (compile (format "nasm -f elf64 %s.nasm -o %s && ld %s -o %s"
+                     filename object-file object-file executable-file))))
 
 ;; Visual enhancements for better error display
 (custom-set-faces
@@ -256,6 +450,15 @@
 (setq recentf-max-menu-items 25
       recentf-max-saved-items 25)
 
+(use-package org-roam
+  :ensure t
+  :custom
+  (org-roam-directory "~/org-roam/")
+  :bind (("C-c n f" . org-roam-node-find))
+  :config
+  (unless (file-directory-p org-roam-directory)
+    (make-directory org-roam-directory t))
+  (org-roam-db-autosync-mode))
 ;; Optimize startup time - reset gc threshold after init
 (add-hook 'emacs-startup-hook
           (lambda ()

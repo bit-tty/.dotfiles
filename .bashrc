@@ -9,14 +9,17 @@
 fastfetch
 
 # Start tmux automatically if not already in a tmux session
-if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
-  exec tmux
-fi
+#if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
+#  exec tmux
+#fi
 
 # Basic aliases
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 alias nv='nvim'
+alias cp='/usr/local/bin/cpg -g'
+alias mv='/usr/local/bin/mvg -g'
+alias emacs="emacsclient -c -a 'emacs'"
 
 
 # Basic history settings
@@ -39,6 +42,8 @@ fi
 
 # Set PATH
 export PATH="$PATH:/home/Duncan/.millennium/ext/bin"
+export PATH="$HOME/.emacs.d/bin:$PATH"
+
 
 # Set up starship prompt if available
 if command -v starship &> /dev/null; then
@@ -48,10 +53,7 @@ else
   PS1='[\u@\h \W]\$ '
 fi
 
-alias cp='/usr/local/bin/cpg -g'
-alias mv='/usr/local/bin/mvg -g'
-
-
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - bash)"
+export PKG_CONFIG_PATH="$HOME/mylibs/lib/pkgconfig:$PKG_CONFIG_PATH"
