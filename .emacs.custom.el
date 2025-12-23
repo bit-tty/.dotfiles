@@ -37,11 +37,10 @@
      "1fc299974daa270e19d1b206ec40aab3a0ce35e7c6a7d389b156bcd411e41a3c"
      "720e8768e7a9bbda94758aba8ef29314fdc51a3e22ac8146726c752fa0a97221"
      "5d67552ed2e841039034dc8245ee1746ab4f00614366ca7018386041f9b0a96f"
-     "e13beeb34b932f309fb2c360a04a460821ca99fe58f69e65557d6c1b10ba18c7"
-     default))
- '(package-selected-packages
-   '(base16-theme clang-format company company-template flycheck-inline
-		  gruber-darker-theme lsp-ui yasnippet-snippets)))
+     "e13beeb34b932f309fb2c360a04a460821ca99fe58f69e65557d6c1b10ba18c7" default))
+ '(global-display-line-numbers-mode t)
+ '(package-selected-packages nil)
+ '(tool-bar-mode nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

@@ -1,121 +1,206 @@
+;;; init.el --- Emacs Configuration
+
+;;; Commentary:
+;; Personal Emacs configuration for C, LaTeX, Rust, and Zig development
+
+;;; Code:
+
+;;==============================================================================
+;; BASIC SETTINGS
+;;==============================================================================
+
 ;; Custom file handling
 (setq custom-file "~/.emacs.custom.el")
 (load-file custom-file)
 
 ;; Font configuration
-(add-to-list 'default-frame-alist '(font . "JetBrainsMono Nerd Font-10"))
+(add-to-list 'default-frame-alist '(font . "Iosevka Nerd Font-10"))
 
-;; Basic UI configuration
-(tool-bar-mode 1)
-(menu-bar-mode 1)
+;; UI configuration
+(tool-bar-mode 0)
+(menu-bar-mode 0)
 (scroll-bar-mode 0)
 (global-display-line-numbers-mode 1)
 (electric-indent-mode 1)
 (electric-pair-mode 1)
+(setq cua-enable-cua-keys nil)
 
-;; Window size configuration
+;; Window size
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
-;; Package setup with performance optimization
+;; Better defaults
+(setq-default indent-tabs-mode nil
+              tab-width 4
+              fill-column 80)
+
+;; Global modes
+(global-auto-revert-mode 1)
+(show-paren-mode 1)
+(delete-selection-mode 1)
+(save-place-mode 1)
+(recentf-mode 1)
+(setq recentf-max-menu-items 25
+      recentf-max-saved-items 25)
+
+;; Enable syntax highlighting globally
+(global-font-lock-mode 1)
+(setq font-lock-maximum-decoration t)
+
+;; Performance optimizations
+(setq gc-cons-threshold (* 2 1000 1000)
+      read-process-output-max (* 1024 1024)
+      inhibit-startup-screen t
+      initial-scratch-message nil)
+
+;; Backup and auto-save configuration
+(setq backup-directory-alist '(("." . "~/.emacs.d/backups"))
+      auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-saves/" t))
+      delete-old-versions t
+      kept-new-versions 6
+      kept-old-versions 2
+      version-control t
+      create-lockfiles nil)
+
+;; Create backup and auto-save directories
+(let ((backup-dir "~/.emacs.d/backups")
+      (auto-save-dir "~/.emacs.d/auto-saves"))
+  (unless (file-exists-p backup-dir)
+    (make-directory backup-dir t))
+  (unless (file-exists-p auto-save-dir)
+    (make-directory auto-save-dir t)))
+
+;;==============================================================================
+;; PACKAGE MANAGEMENT
+;;==============================================================================
+
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
                          ("elpa" . "https://elpa.gnu.org/packages/"))
       package-archive-priorities '(("melpa" . 1) ("elpa" . 2)))
 (package-initialize)
 
-;; Install use-package if not already installed
+;; Install use-package
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
 
 (require 'use-package)
 (setq use-package-always-ensure t
-      use-package-always-defer t ;; Defer loading for better startup time
       use-package-expand-minimally t)
 
-;; YASnippet for parameter completion and code snippets
-(use-package yasnippet
-  :ensure t
-  :defer 2 ; Load after 2 seconds
+;;==============================================================================
+;; THEME AND SYNTAX HIGHLIGHTING
+;;==============================================================================
+
+;; No custom theme - using default Emacs appearance
+
+;; Rainbow delimiters - color matching parentheses
+(use-package rainbow-delimiters
+  :defer nil
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+;; Highlight TODO, FIXME, NOTE, etc.
+(use-package hl-todo
+  :defer nil
   :config
+  (global-hl-todo-mode)
+  (setq hl-todo-keyword-faces
+        '(("TODO"   . "#FF0000")
+          ("FIXME"  . "#FF0000")
+          ("DEBUG"  . "#A020F0")
+          ("HACK"   . "#FF8C00")
+          ("NOTE"   . "#1E90FF")
+          ("DEPRECATED" . "#B22222"))))
+
+;;==============================================================================
+;; COMPLETION AND SNIPPETS
+;;==============================================================================
+
+;; YASnippet
+(use-package yasnippet
+  :defer nil
+  :init
   (yas-global-mode 1)
+  :config
   (setq yas-snippet-dirs '("~/.emacs.d/snippets"))
-  ;; Snippet navigation keybindings
   (define-key yas-keymap [(tab)] 'yas-next-field)
   (define-key yas-keymap (kbd "TAB") 'yas-next-field)
   (define-key yas-keymap [(backtab)] 'yas-prev-field)
   (define-key yas-keymap (kbd "S-TAB") 'yas-prev-field))
 
-;; Yasnippet snippets collection
 (use-package yasnippet-snippets
-  :ensure t
+  :defer nil
   :after yasnippet)
 
-;; Which-key for discovering keybindings
+;; Which-key
 (use-package which-key
-  :defer 1
-  :config
+  :defer nil
+  :init
   (which-key-mode)
+  :config
   (setq which-key-idle-delay 0.3))
 
-
-(require 'package)
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.org/packages/") t)
-
-;; Company mode for completion
+;; Company mode
 (use-package company
-  :defer 1
-  :config
+  :defer nil
+  :init
   (global-company-mode)
+  :config
   (setq company-show-numbers t
         company-tooltip-align-annotations t
         company-idle-delay 0.1
         company-minimum-prefix-length 1))
 
-(use-package company-template
-  :after company
-  :config
-  (define-key company-template-nav-map (kbd "TAB")
-    'company-template-forward-field))
+;;==============================================================================
+;; SYNTAX CHECKING
+;;==============================================================================
 
-;; Enhanced Flycheck for syntax checking with inline errors
 (use-package flycheck
-  :hook (prog-mode . flycheck-mode)
+  :defer nil
+  :init
+  (global-flycheck-mode)
   :config
-  ;; Show errors in echo area
   (setq flycheck-display-errors-delay 0.3
         flycheck-idle-change-delay 0.5
         flycheck-indication-mode 'right-fringe
         flycheck-highlighting-mode 'lines
-        flycheck-check-syntax-automatically '(save mode-enabled)))
+        flycheck-check-syntax-automatically '(save idle-change mode-enabled)))
 
-;; Flycheck inline errors (shows errors right in the buffer)
 (use-package flycheck-inline
+  :defer nil
   :after flycheck
   :hook (flycheck-mode . flycheck-inline-mode))
 
-;; LSP Mode for language server support
+;; Global keybindings for flycheck
+(global-set-key (kbd "M-n") 'flycheck-next-error)
+(global-set-key (kbd "M-p") 'flycheck-previous-error)
+(global-set-key (kbd "C-c e") 'flycheck-list-errors)
+
+;;==============================================================================
+;; LSP MODE
+;;==============================================================================
+
 (use-package lsp-mode
+  :defer nil
   :init
   (setq lsp-keymap-prefix "C-c l")
   :hook ((c-mode . lsp-deferred)
          (c++-mode . lsp-deferred)
+         (zig-mode . lsp-deferred)
          (lsp-mode . lsp-enable-which-key-integration))
   :commands (lsp lsp-deferred)
   :config
-  ;; Performance optimizations
   (setq lsp-idle-delay 0.5
-        lsp-log-io nil ; Disable IO logging for performance
-        lsp-enable-file-watchers nil ; Disable file watchers for large projects
+        lsp-log-io nil
+        lsp-enable-file-watchers nil
         lsp-enable-folding nil
         lsp-enable-imenu nil
-        lsp-enable-snippet t ; Enable snippets for parameter completion
+        lsp-enable-snippet t
         lsp-enable-symbol-highlighting t
-        lsp-signature-auto-activate nil ; Disable auto signature help for performance
+        lsp-signature-auto-activate nil
         lsp-signature-render-documentation nil)
   
-  ;; Configure clangd for C development
+  ;; Configure clangd
   (setq lsp-clients-clangd-args
         '("-j=3"
           "--background-index"
@@ -125,333 +210,64 @@
           "--header-insertion-decorators=0"
           "--pch-storage=memory"))
   
-  ;; Force C mode for .c files
   (add-to-list 'lsp-language-id-configuration '(c-mode . "c")))
 
-;; Enhanced LSP UI for better interface and inline diagnostics
 (use-package lsp-ui
+  :defer nil
   :after lsp-mode
   :commands lsp-ui-mode
   :config
-  ;; Sideline configuration for inline diagnostics
   (setq lsp-ui-sideline-enable t
         lsp-ui-sideline-show-diagnostics t
         lsp-ui-sideline-show-hover nil
         lsp-ui-sideline-show-code-actions t
         lsp-ui-sideline-delay 0.3
-        lsp-ui-sideline-ignore-duplicate t)
-  
-  ;; Doc popup configuration
-  (setq lsp-ui-doc-enable t
+        lsp-ui-sideline-ignore-duplicate t
+        lsp-ui-doc-enable t
         lsp-ui-doc-position 'at-point
         lsp-ui-doc-delay 0.5
         lsp-ui-doc-max-width 80
-        lsp-ui-doc-max-height 20)
-  
-  ;; Peek configuration
-  (setq lsp-ui-peek-enable t
+        lsp-ui-doc-max-height 20
+        lsp-ui-peek-enable t
         lsp-ui-peek-show-directory t))
 
-;; NASM mode for assembly language programming
-(use-package nasm-mode
-  :ensure t
-  :mode (("\\.nasm\\'" . nasm-mode)
-         ("\\.asm\\'" . nasm-mode)
-         ("\\.s\\'" . nasm-mode)
-         ("\\.S\\'" . nasm-mode)
-         ("\\.inc\\'" . nasm-mode))
-  :config
-  ;; NASM-specific settings
-  (setq nasm-basic-offset 4)
-  
-  ;; Custom indentation function for NASM
-  (defun nasm-indent-line ()
-    "Indent current line as NASM assembly code."
-    (interactive)
-    (let ((indent-col 0)
-          (current-line (thing-at-point 'line t)))
-      (save-excursion
-        (beginning-of-line)
-        (cond
-         ;; Labels (ending with :) should have no indentation
-         ((string-match "^[a-zA-Z_][a-zA-Z0-9_]*:" current-line)
-          (setq indent-col 0))
-         ;; Instructions and directives should be indented
-         ((string-match "^[ \t]*[a-zA-Z]" current-line)
-          (setq indent-col nasm-basic-offset))
-         ;; Comments starting the line
-         ((string-match "^[ \t]*;" current-line)
-          (setq indent-col 0))
-         ;; Default indentation
-         (t (setq indent-col nasm-basic-offset))))
-      (indent-line-to indent-col)))
-  
-  ;; Set up NASM mode hook
-  (add-hook 'nasm-mode-hook
-            (lambda ()
-              ;; Set indentation function
-              (setq-local indent-line-function 'nasm-indent-line)
-              ;; Use tabs for indentation in assembly
-              (setq indent-tabs-mode t)
-              (setq tab-width 8)
-              ;; Set comment syntax
-              (setq-local comment-start ";")
-              (setq-local comment-end "")
-              ;; Enable syntax highlighting
-              (font-lock-mode 1))))
+;;==============================================================================
+;; C PROGRAMMING
+;;==============================================================================
 
-;; Assembly language snippets setup
-(defun create-nasm-snippets-directory ()
-  "Create NASM snippets directory and add some basic snippets."
-  (let ((nasm-snippet-dir "~/.emacs.d/snippets/nasm-mode"))
-    (unless (file-exists-p nasm-snippet-dir)
-      (make-directory nasm-snippet-dir t))
-    
-    ;; Create basic NASM snippets
-    (let ((snippets '(
-                     ("main" . "# -*- mode: snippet -*-
-# name: main function template
-# key: main
-# --
-section .text
-global _start
-
-_start:
-    $0
-    
-    ; Exit program
-    mov rax, 60        ; sys_exit
-    mov rdi, 0         ; exit status
-    syscall")
-
-                     ("func" . "# -*- mode: snippet -*-
-# name: function template
-# key: func
-# --
-${1:function_name}:
-    push rbp
-    mov rbp, rsp
-    
-    $0
-    
-    mov rsp, rbp
-    pop rbp
-    ret")
-
-                     ("loop" . "# -*- mode: snippet -*-
-# name: loop template
-# key: loop
-# --
-${1:loop_start}:
-    $0
-    
-    ${2:dec rcx}
-    jnz $1")
-
-                     ("data" . "# -*- mode: snippet -*-
-# name: data section
-# key: data
-# --
-section .data
-    ${1:variable} d${2:b} ${3:value}$0")
-
-                     ("bss" . "# -*- mode: snippet -*-
-# name: bss section
-# key: bss
-# --
-section .bss
-    ${1:buffer} res${2:b} ${3:size}$0")
-
-                     ("print" . "# -*- mode: snippet -*-
-# name: print string (Linux syscall)
-# key: print
-# --
-    mov rax, 1         ; sys_write
-    mov rdi, 1         ; stdout
-    mov rsi, ${1:message}
-    mov rdx, ${2:length}
-    syscall$0"))))
-      
-      (dolist (snippet snippets)
-        (let ((filename (concat nasm-snippet-dir "/" (car snippet))))
-          (unless (file-exists-p filename)
-            (with-temp-file filename
-              (insert (cdr snippet)))))))))
-
-;; Create NASM snippets after yasnippet is loaded
-(with-eval-after-load 'yasnippet
-  (create-nasm-snippets-directory))
-
-;; Company backend for NASM keywords and registers
-(defvar nasm-keywords
-  '("section" "global" "extern" "bits" "org" "times" "db" "dw" "dd" "dq" "dt"
-    "resb" "resw" "resd" "resq" "rest" "incbin" "equ" "struc" "endstruc"
-    "istruc" "iend" "align" "alignb" "use16" "use32" "use64"))
-
-(defvar nasm-registers
-  '("rax" "rbx" "rcx" "rdx" "rsi" "rdi" "rbp" "rsp"
-    "r8" "r9" "r10" "r11" "r12" "r13" "r14" "r15"
-    "eax" "ebx" "ecx" "edx" "esi" "edi" "ebp" "esp"
-    "ax" "bx" "cx" "dx" "si" "di" "bp" "sp"
-    "al" "bl" "cl" "dl" "ah" "bh" "ch" "dh"
-    "xmm0" "xmm1" "xmm2" "xmm3" "xmm4" "xmm5" "xmm6" "xmm7"
-    "xmm8" "xmm9" "xmm10" "xmm11" "xmm12" "xmm13" "xmm14" "xmm15"))
-
-(defvar nasm-instructions
-  '("mov" "add" "sub" "mul" "div" "imul" "idiv" "inc" "dec"
-    "cmp" "test" "and" "or" "xor" "not" "neg" "shl" "shr" "sal" "sar"
-    "jmp" "je" "jne" "jz" "jnz" "jl" "jle" "jg" "jge" "ja" "jae" "jb" "jbe"
-    "call" "ret" "push" "pop" "nop" "int" "syscall" "leave" "enter"
-    "loop" "loope" "loopne" "loopz" "loopnz" "rep" "repe" "repne" "repz" "repnz"))
-
-(defun company-nasm (command &optional arg &rest ignored)
-  "Company backend for NASM assembly."
-  (interactive (list 'interactive))
-  (case command
-    (interactive (company-begin-backend 'company-nasm))
-    (prefix (and (eq major-mode 'nasm-mode)
-                 (company-grab-symbol)))
-    (candidates
-     (let ((prefix (downcase arg)))
-       (append
-        (all-completions prefix nasm-keywords)
-        (all-completions prefix nasm-registers)
-        (all-completions prefix nasm-instructions))))
-    (meta
-     (cond
-      ((member arg nasm-keywords) "NASM directive/keyword")
-      ((member arg nasm-registers) "CPU register")
-      ((member arg nasm-instructions) "Assembly instruction")
-      (t nil)))))
-
-;; Add NASM company backend
-(with-eval-after-load 'company
-  (add-to-list 'company-backends 'company-nasm))
-
-;; C mode configuration - Linux coding style
-(setq c-default-style "linux"
-      c-basic-offset 8)  ; Linux kernel uses 8-space indentation
-
-;; Enhanced Linux style with proper tab handling
+;; GNU C style with tabs-only indentation
 (defun c-lineup-arglist-tabs-only (ignored)
-  "Line up argument lists by tabs, not spaces"
+  "Line up argument lists by tabs, not spaces."
   (let* ((anchor (c-langelem-pos c-syntactic-element))
          (column (c-langelem-2nd-pos c-syntactic-element))
          (offset (- (1+ column) anchor))
          (steps (floor offset c-basic-offset)))
     (* (max steps 1) c-basic-offset)))
 
-;; Define the Linux tabs-only style
-(c-add-style "linux-tabs-only"
-             '("linux"
+(c-add-style "gnu-tabs-only"
+             '("gnu"
                (c-offsets-alist
                 (arglist-cont-nonempty
                  c-lineup-gcc-asm-reg
                  c-lineup-arglist-tabs-only))))
 
-;; Apply Linux coding style to all C files
+;; C mode configuration
 (add-hook 'c-mode-hook
           (lambda ()
-            ;; Use tabs, not spaces
-            (setq indent-tabs-mode t)
-            ;; Set the Linux tabs-only style
-            (c-set-style "linux-tabs-only")
-            ;; Ensure tab width is 8 (Linux standard)
-            (setq tab-width 8)
-            ;; Set basic offset to 8
-            (setq c-basic-offset 8)))
+            (setq indent-tabs-mode t
+                  tab-width 8
+                  c-basic-offset 2)
+            (c-set-style "gnu-tabs-only")))
 
 ;; File associations
 (add-to-list 'auto-mode-alist '("\\.c\\'" . c-mode))
 (add-to-list 'auto-mode-alist '("\\.h\\'" . c-mode))
 
-;; Optional: Add some Linux kernel specific settings
-(defun setup-kernel-coding-style ()
-  "Additional settings for strict Linux kernel style compliance"
-  (interactive)
-  ;; Maximum line length for kernel code
-  (setq fill-column 80)
-  ;; Highlight lines that are too long
-  (require 'whitespace)
-  (setq whitespace-style '(face lines-tail))
-  (setq whitespace-line-column 80)
-  (whitespace-mode 1))
-
-;; Uncomment the next line if you want kernel-specific settings for all C files
-;; (add-hook 'c-mode-hook 'setup-kernel-coding-style)
-
-;; CUA mode for familiar cut/copy/paste keybindings
-(cua-mode 1)
-(setq cua-auto-tabify-rectangles nil
-      cua-keep-region-after-copy t)
-
-;; Global keybindings
-(global-set-key (kbd "M-n") 'flycheck-next-error)
-(global-set-key (kbd "M-p") 'flycheck-previous-error)
-(global-set-key (kbd "C-c e") 'flycheck-list-errors)
-
-;; NASM-specific keybindings
-(with-eval-after-load 'nasm-mode
-  (define-key nasm-mode-map (kbd "C-c C-c") 'compile)
-  (define-key nasm-mode-map (kbd "C-c C-r") 'nasm-run-buffer))
-
-;; Custom compile function for NASM
-(defun nasm-compile-and-run ()
-  "Compile current NASM file and create executable."
-  (interactive)
-  (let* ((filename (file-name-sans-extension (buffer-file-name)))
-         (object-file (concat filename ".o"))
-         (executable-file filename))
-    (compile (format "nasm -f elf64 %s.nasm -o %s && ld %s -o %s"
-                     filename object-file object-file executable-file))))
-
-;; Visual enhancements for better error display
-(custom-set-faces
- '(flycheck-error ((t (:underline (:color "red" :style wave)))))
- '(flycheck-warning ((t (:underline (:color "orange" :style wave)))))
- '(flycheck-info ((t (:underline (:color "blue" :style wave))))))
-
-;; Better defaults
-(setq-default indent-tabs-mode nil ; Use spaces instead of tabs (overridden in C mode)
-              tab-width 4         ; Set tab width (overridden in C mode to 8)
-              fill-column 80)     ; Set line length
-
-;; Global modes
-(global-auto-revert-mode 1)   ; Auto-reload files changed outside Emacs
-(show-paren-mode 1)           ; Highlight matching parentheses
-(delete-selection-mode 1)     ; Replace selected text when typing
-(save-place-mode 1)           ; Remember cursor position in files
-
-;; Performance optimizations
-(setq gc-cons-threshold (* 2 1000 1000)  ; Increase garbage collection threshold
-      read-process-output-max (* 1024 1024) ; Increase process output buffer
-      inhibit-startup-screen t             ; Skip startup screen
-      initial-scratch-message nil)         ; Clear scratch buffer message
-
-;; Backup and auto-save configuration
-(setq backup-directory-alist '(("." . "~/.emacs.d/backups"))
-      auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-saves/" t))
-      delete-old-versions t
-      kept-new-versions 6
-      kept-old-versions 2
-      version-control t
-      create-lockfiles nil) ; Disable lockfiles
-
-;; Create backup and auto-save directories if they don't exist
-(let ((backup-dir "~/.emacs.d/backups")
-      (auto-save-dir "~/.emacs.d/auto-saves"))
-  (unless (file-exists-p backup-dir)
-    (make-directory backup-dir t))
-  (unless (file-exists-p auto-save-dir)
-    (make-directory auto-save-dir t)))
-
-;; Recent files
-(recentf-mode 1)
-(setq recentf-max-menu-items 25
-      recentf-max-saved-items 25)
+;;==============================================================================
+;; ORG-ROAM
+;;==============================================================================
 
 (use-package org-roam
-  :ensure t
   :custom
   (org-roam-directory "~/org-roam/")
   :bind (("C-c n f" . org-roam-node-find))
@@ -459,7 +275,377 @@ section .bss
   (unless (file-directory-p org-roam-directory)
     (make-directory org-roam-directory t))
   (org-roam-db-autosync-mode))
-;; Optimize startup time - reset gc threshold after init
+
+;;==============================================================================
+;; LATEX CONFIGURATION
+;;==============================================================================
+
+;; AUCTeX
+(use-package tex
+  :ensure auctex
+  :defer t
+  :config
+  (setq TeX-PDF-mode t
+        TeX-auto-save t
+        TeX-parse-self t
+        TeX-master nil
+        TeX-view-program-selection '((output-pdf "Zathura"))
+        TeX-view-program-list '(("Zathura" "zathura %o"))
+        TeX-source-correlate-mode t
+        TeX-source-correlate-start-server t
+        TeX-source-correlate-method 'synctex
+        TeX-electric-sub-and-superscript t
+        TeX-save-query nil)
+  
+  (add-hook 'TeX-after-compilation-finished-functions
+            #'TeX-revert-document-buffer)
+  
+  ;; Enhanced syntax highlighting for LaTeX
+  (setq font-latex-fontify-script t
+        font-latex-fontify-sectioning 'color
+        font-latex-script-display '((raise -0.3) . (raise 0.3)))
+  
+  ;; Enable font-lock mode for syntax coloring
+  (add-hook 'LaTeX-mode-hook 'font-lock-mode))
+
+;; RefTeX
+(use-package reftex
+  :defer t
+  :hook (LaTeX-mode . reftex-mode)
+  :config
+  (setq reftex-plug-into-AUCTeX t
+        reftex-bibliography-commands '("bibliography" "nobibliography" "addbibresource")))
+
+;; Company-AUCTeX
+(use-package company-auctex
+  :defer t
+  :after (company auctex)
+  :config
+  (company-auctex-init))
+
+;; CDLaTeX
+(use-package cdlatex
+  :defer t
+  :hook (LaTeX-mode . cdlatex-mode)
+  :config
+  (setq cdlatex-math-symbol-alist
+        '((?. "\\cdot")
+          (?< "\\leq")
+          (?> "\\geq")
+          (?* "\\times"))))
+
+;; PDF Tools
+(use-package pdf-tools
+  :defer t
+  :magic ("%PDF" . pdf-view-mode)
+  :config
+  (pdf-tools-install :no-query)
+  (setq-default pdf-view-display-size 'fit-page)
+  (setq pdf-annot-activate-created-annotations t
+        pdf-view-resize-factor 1.1)
+  
+  (add-hook 'pdf-view-mode-hook 'auto-revert-mode)
+  
+  (define-key pdf-view-mode-map (kbd "C-s") 'isearch-forward)
+  (define-key pdf-view-mode-map (kbd "C-r") 'isearch-backward))
+
+;; LaTeX Preview Pane
+(use-package latex-preview-pane
+  :defer t
+  :config
+  (setq latex-preview-pane-enable nil))
+
+;; Magic LaTeX Buffer - prettify LaTeX code in buffer
+(use-package magic-latex-buffer
+  :defer t
+  :hook (LaTeX-mode . magic-latex-buffer-mode)
+  :config
+  (setq magic-latex-buffer-preview-scale 1.0))
+
+;; Highlight LaTeX
+(use-package highlight-numbers
+  :defer t
+  :hook (LaTeX-mode . highlight-numbers-mode))
+
+(use-package highlight-quoted
+  :defer t
+  :hook (LaTeX-mode . highlight-quoted-mode))
+
+;; LaTeX mode hook
+(add-hook 'LaTeX-mode-hook
+          (lambda ()
+            (flyspell-mode 1)
+            (auto-fill-mode 1)
+            (turn-on-reftex)
+            (outline-minor-mode 1)
+            (visual-line-mode 1)
+            ;; Enable prettify symbols for LaTeX
+            (prettify-symbols-mode 1)))
+
+;; Prettify symbols in LaTeX mode
+(add-hook 'LaTeX-mode-hook
+          (lambda ()
+            (setq prettify-symbols-alist
+                  '(("\\alpha" . ?α)
+                    ("\\beta" . ?β)
+                    ("\\gamma" . ?γ)
+                    ("\\delta" . ?δ)
+                    ("\\epsilon" . ?ε)
+                    ("\\zeta" . ?ζ)
+                    ("\\eta" . ?η)
+                    ("\\theta" . ?θ)
+                    ("\\lambda" . ?λ)
+                    ("\\mu" . ?μ)
+                    ("\\pi" . ?π)
+                    ("\\sigma" . ?σ)
+                    ("\\phi" . ?φ)
+                    ("\\omega" . ?ω)
+                    ("\\Delta" . ?Δ)
+                    ("\\Gamma" . ?Γ)
+                    ("\\Lambda" . ?Λ)
+                    ("\\Phi" . ?Φ)
+                    ("\\Psi" . ?Ψ)
+                    ("\\Omega" . ?Ω)
+                    ("\\int" . ?∫)
+                    ("\\sum" . ?∑)
+                    ("\\prod" . ?∏)
+                    ("\\sqrt" . ?√)
+                    ("\\infty" . ?∞)
+                    ("\\in" . ?∈)
+                    ("\\notin" . ?∉)
+                    ("\\subset" . ?⊂)
+                    ("\\subseteq" . ?⊆)
+                    ("\\supset" . ?⊃)
+                    ("\\supseteq" . ?⊇)
+                    ("\\cup" . ?∪)
+                    ("\\cap" . ?∩)
+                    ("\\forall" . ?∀)
+                    ("\\exists" . ?∃)
+                    ("\\neg" . ?¬)
+                    ("\\wedge" . ?∧)
+                    ("\\vee" . ?∨)
+                    ("\\rightarrow" . ?→)
+                    ("\\leftarrow" . ?←)
+                    ("\\Rightarrow" . ?⇒)
+                    ("\\Leftarrow" . ?⇐)
+                    ("\\leftrightarrow" . ?↔)
+                    ("\\Leftrightarrow" . ?⇔)
+                    ("\\leq" . ?≤)
+                    ("\\geq" . ?≥)
+                    ("\\neq" . ?≠)
+                    ("\\approx" . ?≈)
+                    ("\\equiv" . ?≡)
+                    ("\\times" . ?×)
+                    ("\\cdot" . ?⋅)
+                    ("\\partial" . ?∂)
+                    ("\\nabla" . ?∇)))))
+
+;; Spell checking configuration
+(with-eval-after-load 'flyspell
+  (setq ispell-program-name "aspell"
+        ispell-extra-args '("--sug-mode=ultra" "--lang=en_US")))
+
+;; LaTeX keybindings
+(with-eval-after-load 'latex
+  (define-key LaTeX-mode-map (kbd "C-c C-a") 'TeX-command-run-all)
+  (define-key LaTeX-mode-map (kbd "C-c p") 'latex-preview-pane-mode)
+  (define-key LaTeX-mode-map (kbd "C-c C-v") 'TeX-view)
+  (define-key LaTeX-mode-map (kbd "C-c C-l") 'TeX-recenter-output-buffer)
+  (define-key LaTeX-mode-map (kbd "C-c w") 'latex-word-count))
+
+;; LaTeX word count
+(defun latex-word-count ()
+  "Count words in LaTeX document using texcount."
+  (interactive)
+  (let* ((file (buffer-file-name))
+         (output (shell-command-to-string (concat "texcount -brief " file))))
+    (message "Word count: %s" output)))
+
+;; LaTeX snippet creation
+(defun create-latex-snippets-directory ()
+  "Create LaTeX snippets directory and add technical writing snippets."
+  (let ((latex-snippet-dir "~/.emacs.d/snippets/latex-mode"))
+    (unless (file-exists-p latex-snippet-dir)
+      (make-directory latex-snippet-dir t))
+    
+    (let ((snippets '(
+                     ("article" . "# -*- mode: snippet -*-
+# name: article template
+# key: article
+# --
+\\documentclass[11pt,a4paper]{article}
+\\usepackage{amsmath}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+\\usepackage{listings}
+\\usepackage{booktabs}
+
+\\title{${1:Title}}
+\\author{${2:Author}}
+\\date{\\today}
+
+\\begin{document}
+\\maketitle
+
+\\section{${3:Introduction}}
+$0
+
+\\end{document}")
+
+                     ("fig" . "# -*- mode: snippet -*-
+# name: figure
+# key: fig
+# --
+\\begin{figure}[${1:htbp}]
+    \\centering
+    \\includegraphics[width=${2:0.8}\\textwidth]{${3:filename}}
+    \\caption{${4:caption}}
+    \\label{fig:${5:label}}
+\\end{figure}
+$0")
+
+                     ("table" . "# -*- mode: snippet -*-
+# name: table
+# key: table
+# --
+\\begin{table}[${1:htbp}]
+    \\centering
+    \\caption{${2:caption}}
+    \\label{tab:${3:label}}
+    \\begin{tabular}{${4:lll}}
+        \\toprule
+        ${5:Header 1} & ${6:Header 2} & ${7:Header 3} \\\\
+        \\midrule
+        $0
+        \\bottomrule
+    \\end{tabular}
+\\end{table}")
+
+                     ("eq" . "# -*- mode: snippet -*-
+# name: equation
+# key: eq
+# --
+\\begin{equation}
+    \\label{eq:${1:label}}
+    $0
+\\end{equation}")
+
+                     ("code" . "# -*- mode: snippet -*-
+# name: code listing
+# key: code
+# --
+\\begin{lstlisting}[language=${1:C}, caption={${2:caption}}, label={lst:${3:label}}]
+$0
+\\end{lstlisting}")
+
+                     ("sec" . "# -*- mode: snippet -*-
+# name: section
+# key: sec
+# --
+\\section{${1:Section Title}}
+\\label{sec:${2:label}}
+$0")
+
+                     ("subsec" . "# -*- mode: snippet -*-
+# name: subsection
+# key: subsec
+# --
+\\subsection{${1:Subsection Title}}
+\\label{subsec:${2:label}}
+$0")
+
+                     ("enum" . "# -*- mode: snippet -*-
+# name: enumerate
+# key: enum
+# --
+\\begin{enumerate}
+    \\item $0
+\\end{enumerate}")
+
+                     ("item" . "# -*- mode: snippet -*-
+# name: itemize
+# key: item
+# --
+\\begin{itemize}
+    \\item $0
+\\end{itemize}")
+
+                     ("align" . "# -*- mode: snippet -*-
+# name: align
+# key: align
+# --
+\\begin{align}
+    $0
+\\end{align}"))))
+      
+      (dolist (snippet snippets)
+        (let ((filename (concat latex-snippet-dir "/" (car snippet))))
+          (unless (file-exists-p filename)
+            (with-temp-file filename
+              (insert (cdr snippet)))))))))
+
+(with-eval-after-load 'yasnippet
+  (create-latex-snippets-directory))
+
+;; Biber configuration - Fixed version
+(with-eval-after-load 'tex
+  ;; Set default bibliography backend to biber
+  (setq TeX-engine 'default)
+  (setq-default TeX-command-extra-options "-shell-escape")
+  
+  ;; Ensure AUCTeX knows about Biber
+  (unless (assoc "Biber" TeX-command-list)
+    (add-to-list 'TeX-command-list
+                 '("Biber" "biber %s" TeX-run-Biber nil
+                   (plain-tex-mode latex-mode doctex-mode ams-tex-mode texinfo-mode context-mode)
+                   :help "Run Biber"))))
+
+;;==============================================================================
+;; RUST PROGRAMMING
+;;==============================================================================
+
+(use-package rustic
+  :ensure t
+  :mode ("\\.rs\\'" . rustic-mode)
+  :hook (rustic-mode . lsp-deferred)
+  :config
+  ;; Use rust-analyzer via LSP
+  (setq rustic-lsp-client 'lsp-mode
+        rustic-format-on-save nil
+        rustic-lsp-server 'rust-analyzer)
+  
+  ;; Rust compilation settings
+  (setq rustic-cargo-bin "cargo"
+        rustic-rustfmt-bin "rustfmt"))
+
+;;==============================================================================
+;; ZIG PROGRAMMING
+;;==============================================================================
+
+(use-package zig-mode
+  :ensure t
+  :mode ("\\.zig\\'" . zig-mode)
+  :hook (zig-mode . lsp-deferred)
+  :config
+  ;; Zig formatting on save (optional)
+  (setq zig-format-on-save nil))  ; Set to t for auto-format
+
+;; Configure zls for LSP
+(with-eval-after-load 'lsp-mode
+  (add-to-list 'lsp-language-id-configuration '(zig-mode . "zig"))
+  (lsp-register-client
+   (make-lsp-client
+    :new-connection (lsp-stdio-connection "zls")
+    :major-modes '(zig-mode)
+    :server-id 'zls)))
+
+;;==============================================================================
+;; STARTUP OPTIMIZATION
+;;==============================================================================
+
 (add-hook 'emacs-startup-hook
           (lambda ()
             (setq gc-cons-threshold 800000)))
+
+(provide 'init)
+;;; init.el ends here
